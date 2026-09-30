@@ -1,0 +1,1 @@
+"""Admin diagnostic routes placeholder."""

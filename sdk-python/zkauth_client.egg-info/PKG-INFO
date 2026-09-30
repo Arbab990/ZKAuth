@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: zkauth-client
+Version: 0.1.0
+Summary: Python SDK for ZKAuth
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: requests
+
+# ZKAuth Python SDK
+
+Installable SDK scaffold. Client behavior will be added in Phase 3.
