@@ -374,6 +374,7 @@ export async function login(baseUrl, username, password) {
 5. Load the Ed25519 private key from a local file path in `.env`, never hardcode it, never commit it
 6. Use parameterized SQLAlchemy queries only — no raw string-interpolated SQL
 7. Write at least one integration test for any new API endpoint before considering it complete
+8. Work on a feature branch (phase-N-description) and open a PR into main — never commit directly to main once Phase 1 begins (see "GIT WORKFLOW" section above)
 
 ### YOU MUST NOT:
 1. Never store a password or any password-derived hash anywhere — only the SRP `salt` and `verifier`
@@ -468,6 +469,30 @@ PHASE 5 — CI & Polish
   [ ] README.md finished: what it is, why SRP/Ed25519/hash-chain, how to run it, what it protects against
   [ ] ROADMAP.md documents v0.2 (authz, revocation) without any of it implemented yet
 ```
+
+---
+## GIT WORKFLOW — FEATURE BRANCH PER PHASE
+
+Starting from Phase 1 onward, work happens on a feature branch, never directly on `main`.
+
+**Branch naming**: `phase-N-short-description`, matching the phase and file/feature being built —
+e.g. `phase-1-srp-core`, `phase-2-token-signer`, `phase-3-audit-chain`, `phase-4-api-wiring`.
+
+**Flow for every phase:**
+1. `git checkout main && git pull origin main`
+2. `git checkout -b phase-N-description`
+3. Implement the phase (this is where the agent does its work)
+4. Commit with a message like `"Phase N: <what was implemented>"`
+5. `git push -u origin phase-N-description`
+6. Open a PR into `main` (GitHub UI or `gh pr create`)
+7. CI (`.github/workflows/test.yml`, already triggers on `pull_request`) must pass
+8. Code review happens against the PR diff, checked against this file's phase requirements
+9. Merge only after CI is green and review findings are resolved
+10. `git checkout main && git pull origin main && git branch -d phase-N-description`
+
+**Rule for AI agents**: never commit directly to `main` once this workflow is in effect. If you are
+asked to implement a phase and you're currently on `main`, create the feature branch first, before
+writing any code.
 
 ---
 
