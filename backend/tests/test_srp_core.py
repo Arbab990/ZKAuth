@@ -14,6 +14,9 @@ from app.core.srp_core import (
 )
 
 
+def test_group_modulus_is_2048_bits():
+    assert N.bit_length() == 2048
+
 def test_srp_happy_path_derives_matching_keys_and_proofs():
     username, password = "alice", "correct horse battery staple"
     salt_hex = generate_salt()
