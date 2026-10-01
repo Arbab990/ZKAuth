@@ -19,6 +19,7 @@ def load_config() -> dict:
         "ED25519_PRIVATE_KEY_PATH": str(private_key_path),
         "ED25519_PUBLIC_KEY_PATH": str(public_key_path),
         "TOKEN_EXPIRE_MINUTES": int(os.environ.get("TOKEN_EXPIRE_MINUTES", "60")),
+        "RATE_LIMIT_LOGIN": os.environ.get("RATE_LIMIT_LOGIN", "5 per minute"),
         "CORS_ORIGINS": os.environ.get(
             "CORS_ORIGINS", "http://localhost:5173"
         ),

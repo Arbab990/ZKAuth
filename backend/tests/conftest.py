@@ -23,6 +23,7 @@ def app(keypair_files):
     return create_app(
         test_config={
             "TESTING": True,
+            "RATELIMIT_ENABLED": False,
             "DATABASE_URL": "sqlite:///:memory:",
             "ED25519_PRIVATE_KEY_PATH": str(keypair_files["private_key_path"]),
         }
