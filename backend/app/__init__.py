@@ -31,10 +31,6 @@ def create_app(test_config: dict | None = None) -> Flask:
     if isinstance(origins, str) and "," in origins:
         origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
     CORS(app, origins=origins)
-    # Limiter.enabled is stored on the shared extension; restore its enabled
-    # default for app instances without an explicit per-app override.
-    if "RATELIMIT_ENABLED" not in app.config:
-        limiter.enabled = True
     limiter.init_app(app)
 
     engine = init_engine(app.config["DATABASE_URL"])

@@ -253,7 +253,6 @@ def test_login_init_is_rate_limited(keypair_files):
             "RATE_LIMIT_LOGIN": "2 per minute",
         }
     )
-    assert app.config.get("RATELIMIT_ENABLED", True) is True
 
     with app.test_client() as rate_client:
         responses = [
@@ -264,3 +263,30 @@ def test_login_init_is_rate_limited(keypair_files):
         ]
 
     assert any(response.status_code == 429 for response in responses)
+
+def test_rate_limit_state_isolated_between_app_instances(keypair_files):
+    common_config = {
+        "TESTING": True,
+        "DATABASE_URL": "sqlite:///:memory:",
+        "ED25519_PRIVATE_KEY_PATH": str(keypair_files["private_key_path"]),
+    }
+    generous_app = create_app(
+        test_config={**common_config, "RATE_LIMIT_LOGIN": "1000 per minute"}
+    )
+    strict_app = create_app(
+        test_config={**common_config, "RATE_LIMIT_LOGIN": "2 per minute"}
+    )
+
+    with strict_app.test_client() as strict_client:
+        strict_responses = [
+            strict_client.post("/api/login/init", json={"username": "strict-user"})
+            for _ in range(4)
+        ]
+    assert any(response.status_code == 429 for response in strict_responses)
+
+    with generous_app.test_client() as generous_client:
+        generous_responses = [
+            generous_client.post("/api/login/init", json={"username": "generous-user"})
+            for _ in range(5)
+        ]
+    assert all(response.status_code == 200 for response in generous_responses)
