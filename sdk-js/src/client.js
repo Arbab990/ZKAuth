@@ -1,6 +1,7 @@
 import axios from "axios"
 import { importSPKI, jwtVerify, errors as joseErrors } from "jose"
 import {
+  InvalidEphemeralError,
   computeClientProof,
   computeClientSession,
   computeServerProof,
@@ -8,6 +9,8 @@ import {
   generateSalt,
   computeVerifier,
 } from "./srpCore.js"
+
+const importedPublicKeys = new Map()
 
 export class RegistrationError extends Error {
   constructor(message = "registration failed") {
@@ -20,6 +23,20 @@ export class LoginFailedError extends Error {
   constructor(message = "invalid credentials") {
     super(message)
     this.name = "LoginFailedError"
+  }
+}
+
+export class RateLimitError extends Error {
+  constructor(message = "too many login attempts") {
+    super(message)
+    this.name = "RateLimitError"
+  }
+}
+
+export class ServerUnavailableError extends Error {
+  constructor(message = "authentication service unavailable") {
+    super(message)
+    this.name = "ServerUnavailableError"
   }
 }
 
@@ -66,6 +83,33 @@ function constantTimeEqual(left, right) {
   return difference === 0
 }
 
+function classifyLoginHttpError(status, phase) {
+  if (status === 429) throw new RateLimitError()
+  if (phase === "verify" && status === 401) {
+    throw new LoginFailedError("invalid credentials")
+  }
+  throw new ServerUnavailableError()
+}
+
+async function loginPost(url, body, phase) {
+  let response
+  try {
+    response = await axios.post(url, body)
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error
+    classifyLoginHttpError(error.response?.status, phase)
+  }
+
+  if (!response || response.status !== 200) {
+    classifyLoginHttpError(response?.status, phase)
+  }
+  return response.data
+}
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.length > 0
+}
+
 export async function register(baseUrl, username, password) {
   const salt = generateSalt()
   const verifier = await computeVerifier(username, password, salt)
@@ -88,48 +132,89 @@ export async function register(baseUrl, username, password) {
 
 export async function login(baseUrl, username, password) {
   const base = baseUrl.replace(/\/$/, "")
-  let init
-  let A
-  let clientProof
-  let K
-  let result
+  const init = await loginPost(base + "/api/login/init", { username }, "init")
+  if (
+    !init ||
+    !isNonEmptyString(init.session_id) ||
+    !isNonEmptyString(init.salt) ||
+    !isNonEmptyString(init.server_public_ephemeral)
+  ) {
+    throw new ServerUnavailableError()
+  }
+
+  const ephemeral = generateClientEphemeral()
+  let clientSession
   try {
-    init = (await axios.post(base + "/api/login/init", { username })).data
-    const ephemeral = generateClientEphemeral()
-    A = ephemeral.A
-    const clientSession = await computeClientSession(
+    clientSession = await computeClientSession(
       username,
       password,
       init.salt,
-      A,
+      ephemeral.A,
       ephemeral.a,
       init.server_public_ephemeral,
     )
-    K = clientSession.K
-    clientProof = await computeClientProof(A, init.server_public_ephemeral, K)
-    result = (await axios.post(base + "/api/login/verify", {
-      session_id: init.session_id,
-      client_public_ephemeral: A,
-      client_proof: clientProof,
-    })).data
-  } catch {
-    throw new LoginFailedError("invalid credentials")
+  } catch (error) {
+    if (error instanceof InvalidEphemeralError) {
+      throw new ServerProofMismatchError("server sent an invalid SRP ephemeral value")
+    }
+    throw error
   }
 
-  const expectedProof = await computeServerProof(A, clientProof, K)
-  if (!constantTimeEqual(expectedProof, result?.server_proof)) {
-    throw new ServerProofMismatchError()
+  const clientProof = await computeClientProof(
+    ephemeral.A,
+    init.server_public_ephemeral,
+    clientSession.K,
+  )
+  const result = await loginPost(
+    base + "/api/login/verify",
+    {
+      session_id: init.session_id,
+      client_public_ephemeral: ephemeral.A,
+      client_proof: clientProof,
+    },
+    "verify",
+  )
+
+  if (
+    !result ||
+    !isNonEmptyString(result.server_proof) ||
+    !isNonEmptyString(result.token)
+  ) {
+    throw new ServerUnavailableError()
   }
-  if (typeof result?.token !== "string" || !result.token) {
-    throw new ServerProofMismatchError("server response did not include a token")
+
+  const expectedProof = await computeServerProof(
+    ephemeral.A,
+    clientProof,
+    clientSession.K,
+  )
+  if (!constantTimeEqual(expectedProof, result.server_proof)) {
+    throw new ServerProofMismatchError()
   }
   return { token: result.token }
 }
 
+function getImportedPublicKey(publicKeyPem) {
+  let keyPromise = importedPublicKeys.get(publicKeyPem)
+  if (!keyPromise) {
+    keyPromise = Promise.resolve().then(() => importSPKI(publicKeyPem, "EdDSA"))
+    importedPublicKeys.set(publicKeyPem, keyPromise)
+    keyPromise.catch(() => {
+      if (importedPublicKeys.get(publicKeyPem) === keyPromise) {
+        importedPublicKeys.delete(publicKeyPem)
+      }
+    })
+  }
+  return keyPromise
+}
+
 export async function verifyToken(token, publicKeyPem) {
   try {
-    const publicKey = await importSPKI(publicKeyPem, "EdDSA")
-    const result = await jwtVerify(token, publicKey, { algorithms: ["EdDSA"] })
+    const publicKey = await getImportedPublicKey(publicKeyPem)
+    const result = await jwtVerify(token, publicKey, {
+      algorithms: ["EdDSA"],
+      requiredClaims: ["exp", "iat"],
+    })
     return result.payload
   } catch (error) {
     if (error instanceof joseErrors.JWTExpired) {

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+﻿import { readFileSync } from "node:fs"
+import { describe, expect, it, vi } from "vitest"
 import {
   N,
   InvalidEphemeralError,
@@ -6,6 +7,8 @@ import {
   computeClientSession,
   computeServerProof,
   computeVerifier,
+  generateClientEphemeral,
+  generateSalt,
 } from "../src/srpCore.js"
 
 const username = "testvector-user"
@@ -56,5 +59,40 @@ describe("SRP client test vectors", () => {
     await expect(
       computeClientSession(username, password, saltHex, A, a, "00"),
     ).rejects.toBeInstanceOf(InvalidEphemeralError)
+  })
+
+  it("matches the backend N constant and has a 2048-bit width", () => {
+    const source = readFileSync(
+      new URL("../../backend/app/core/srp_core.py", import.meta.url),
+      "utf8",
+    )
+    const match = source.match(/N = int\(\s*"""([\s\S]*?)"""/)
+    expect(match).not.toBeNull()
+    const backendNHex = match[1].replace(/\s/g, "")
+    expect(N).toBe(BigInt("0x" + backendNHex))
+    expect(N.toString(2).length).toBe(2048)
+  })
+
+  it("rejects B equal to N and B equal to N plus one", async () => {
+    await expect(
+      computeClientSession(username, password, saltHex, A, a, padInt(N)),
+    ).rejects.toBeInstanceOf(InvalidEphemeralError)
+    await expect(
+      computeClientSession(username, password, saltHex, A, a, padInt(N + 1n)),
+    ).rejects.toBeInstanceOf(InvalidEphemeralError)
+  })
+
+  it("guards salt and ephemeral generation when Web Crypto is unavailable", () => {
+    const message =
+      "Web Crypto (crypto.subtle) is unavailable. ZKAuth requires a secure context: HTTPS or localhost."
+    vi.stubGlobal("crypto", {
+      getRandomValues: (array) => array.fill(1),
+    })
+    try {
+      expect(() => generateSalt()).toThrowError(message)
+      expect(() => generateClientEphemeral()).toThrowError(message)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

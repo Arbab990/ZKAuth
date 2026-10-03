@@ -16,6 +16,9 @@ const serverScript = fileURLToPath(new URL("./run_test_server.py", import.meta.u
 let serverProcess
 let serverStderr = ""
 let serverSpawnError
+let userId
+let username
+let password
 const baseUrl = "http://127.0.0.1:5099"
 
 beforeAll(async () => {
@@ -30,6 +33,7 @@ beforeAll(async () => {
   })
 
   const deadline = Date.now() + 10000
+  let isReady = false
   while (Date.now() < deadline) {
     if (serverSpawnError) {
       throw new Error("Could not start Python interop server: " + serverSpawnError.message)
@@ -39,14 +43,24 @@ beforeAll(async () => {
     }
     try {
       const response = await axios.get(baseUrl + "/health", { timeout: 500 })
-      if (response.status === 200) return
+      if (response.status === 200) {
+        isReady = true
+        break
+      }
     } catch {
       await delay(200)
     }
   }
-  if (serverProcess.pid) serverProcess.kill()
-  throw new Error("Python interop server did not become ready. " + serverStderr)
-}, 15000)
+  if (!isReady) {
+    if (serverProcess.pid) serverProcess.kill()
+    throw new Error("Python interop server did not become ready. " + serverStderr)
+  }
+
+  username = "js-interop-user"
+  password = "js-interop-correct-password"
+  userId = await register(baseUrl, username, password)
+  await register(baseUrl, "js-interop-wrong-password-user", "right-password")
+}, 20000)
 
 afterAll(async () => {
   if (serverProcess?.pid && serverProcess.exitCode === null) {
@@ -56,23 +70,28 @@ afterAll(async () => {
 })
 
 describe("JavaScript to Python live interop", () => {
-  it("registers, logs in, fetches the key, verifies a token, and rejects a wrong password", async () => {
-    const username = "js-interop-user"
-    const password = "js-interop-correct-password"
-    const userId = await register(baseUrl, username, password)
-    expect(userId).toBeTruthy()
+  it("register returns a user_id", () => {
+    expect(userId).toEqual(expect.any(String))
+    expect(userId.length).toBeGreaterThan(0)
+  })
 
-    const { token } = await login(baseUrl, username, password)
-    expect(token).toBeTruthy()
+  it("login with the correct password returns a token", async () => {
+    const result = await login(baseUrl, username, password)
+    expect(result.token).toEqual(expect.any(String))
+    expect(result.token.length).toBeGreaterThan(0)
+  })
 
+  it("fetches the public key and verifies the backend-issued token", async () => {
+    const result = await login(baseUrl, username, password)
     const publicKey = await fetchPublicKey(baseUrl)
-    const claims = await verifyToken(token, publicKey)
+    const claims = await verifyToken(result.token, publicKey)
     expect(claims.sub).toBe(userId)
     expect(claims.username).toBe(username)
+  })
 
-    await register(baseUrl, "js-interop-wrong-password-user", "right-password")
+  it("wrong password rejects with LoginFailedError", async () => {
     await expect(
       login(baseUrl, "js-interop-wrong-password-user", "wrong-password"),
     ).rejects.toBeInstanceOf(LoginFailedError)
-  }, 15000)
+  })
 })

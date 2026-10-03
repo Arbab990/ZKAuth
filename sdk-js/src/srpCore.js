@@ -5,6 +5,14 @@ const BYTE_WIDTH = Math.ceil(N.toString(2).length / 8)
 const HEX_WIDTH = BYTE_WIDTH * 2
 const encoder = new TextEncoder()
 
+function assertCrypto() {
+  if (!globalThis.crypto?.subtle || !globalThis.crypto?.getRandomValues) {
+    throw new Error(
+      "Web Crypto (crypto.subtle) is unavailable. ZKAuth requires a secure context: HTTPS or localhost.",
+    )
+  }
+}
+
 export class InvalidEphemeralError extends Error {
   constructor(message = "Invalid SRP ephemeral value") {
     super(message)
@@ -96,17 +104,19 @@ function modPow(base, exponent, modulus) {
 }
 
 function randomBigIntBelow(limit) {
-  const randomBytes = new Uint8Array(BYTE_WIDTH)
+  const randomBytes = new Uint8Array(BYTE_WIDTH + 8)
   globalThis.crypto.getRandomValues(randomBytes)
   return BigInt("0x" + bytesToHex(randomBytes)) % limit
 }
 
 export async function sha256(bytes) {
+  assertCrypto()
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes)
   return new Uint8Array(digest)
 }
 
 export function generateSalt() {
+  assertCrypto()
   const salt = new Uint8Array(16)
   globalThis.crypto.getRandomValues(salt)
   return bytesToHex(salt)
@@ -118,6 +128,7 @@ export async function computeVerifier(username, password, saltHex) {
 }
 
 export function generateClientEphemeral() {
+  assertCrypto()
   const a = randomBigIntBelow(N - 1n) + 1n
   return { A: bigIntToPaddedHex(modPow(g, a, N)), a: bigIntToPaddedHex(a) }
 }
@@ -126,8 +137,8 @@ export async function computeClientSession(username, password, saltHex, AHex, aH
   const A = paddedHexToBigInt(AHex)
   const a = paddedHexToBigInt(aHex)
   const B = paddedHexToBigInt(BHex)
-  if (B % N === 0n) {
-    throw new InvalidEphemeralError("B must not be congruent to zero modulo N")
+  if (B >= N || B % N === 0n) {
+    throw new InvalidEphemeralError("B must be in the range 1..N-1")
   }
 
   const u = await computeU(A, B)

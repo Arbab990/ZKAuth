@@ -14,6 +14,8 @@ export {
 export {
   RegistrationError,
   LoginFailedError,
+  RateLimitError,
+  ServerUnavailableError,
   ServerProofMismatchError,
   InvalidTokenError,
   TokenExpiredError,
