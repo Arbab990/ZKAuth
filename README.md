@@ -1,6 +1,10 @@
-# ZKAuth
+# Argus
 
 > **An early-stage, self-hostable authentication service built around SRP-6a password proofs, Ed25519-signed tokens, and a hash-linked authentication event log.**
+
+![Hendrik Goltzius's 1615 painting of Juno receiving the eyes of Argus from Mercury](https://upload.wikimedia.org/wikipedia/commons/f/fa/Hendrick_Goltzius_019.jpg)
+
+*The name **Argus** is inspired by Argus Panoptes, the all-seeing guardian of Greek mythology, traditionally described as having many eyes. Image: [Hendrik Goltzius, *Juno receiving the eyes of Argus from Mercury* (1615)](https://commons.wikimedia.org/wiki/File:Hendrick_Goltzius_019.jpg), public domain via Wikimedia Commons.*
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-Flask-000000?style=flat-square&logo=flask&logoColor=white)
@@ -8,16 +12,51 @@
 ![Tokens](https://img.shields.io/badge/Tokens-Ed25519%20%2F%20EdDSA-7B42BC?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
 
-ZKAuth provides an HTTP authentication API and JavaScript and Python client SDKs. Its SRP-6a flow keeps the user's password out of registration and login requests; the service stores an SRP salt and verifier rather than the password. Successful logins receive a JWT signed with an Ed25519 private key, so an application can verify tokens with the corresponding public key.
+Argus provides an HTTP authentication API and JavaScript and Python client SDKs. Its SRP-6a flow keeps the user's password out of registration and login requests; the service stores an SRP salt and verifier rather than the password. Successful logins receive a JWT signed with an Ed25519 private key, so an application can verify tokens with the corresponding public key.
 
 > **Project status:** This is an early-stage authentication project, not a production-ready identity platform. The current scope is registration, login, token verification, and authentication-event recording. Authorization (such as roles and permissions) is not implemented. The React frontend is currently a demo scaffold.
 
 ---
 
-## What ZKAuth Provides
+## Tech Stack
+
+The icons below are visual labels for the technologies used in the repository; they do not imply that every part of the demo frontend is fully implemented.
+
+### Frontend
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/atom.svg" width="18" align="center" alt="React icon" /> **React 18** | Demo frontend UI |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/zap.svg" width="18" align="center" alt="Vite icon" /> **Vite 5** | Frontend development and build tool |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/palette.svg" width="18" align="center" alt="Tailwind CSS icon" /> **Tailwind CSS 3.4** | Utility-first styling |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/arrow-left-right.svg" width="18" align="center" alt="Axios icon" /> **Axios** | HTTP client dependency; the demo integration is not wired up yet |
+
+### Backend and Cryptography
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/code-xml.svg" width="18" align="center" alt="Python icon" /> **Python 3.12** | Backend runtime |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/server.svg" width="18" align="center" alt="Flask icon" /> **Flask 3** | HTTP API and application factory |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/database.svg" width="18" align="center" alt="SQLAlchemy and SQLite icons" /> **SQLAlchemy 2 + SQLite** | ORM and local relational storage |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/lock.svg" width="18" align="center" alt="SRP icon" /> **SRP-6a + SHA-256** | Password verifier and proof exchange |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/key-round.svg" width="18" align="center" alt="Ed25519 icon" /> **Ed25519 / EdDSA JWT** | Token signing and verification with PyJWT and `cryptography` |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/fingerprint.svg" width="18" align="center" alt="Audit chain icon" /> **SHA-256 hash chain** | Links authentication events for tamper detection |
+
+### SDKs and Quality
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/square-code.svg" width="18" align="center" alt="JavaScript SDK icon" /> **JavaScript SDK** | SRP client, HTTP requests, and local EdDSA JWT verification |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/package.svg" width="18" align="center" alt="Python SDK icon" /> **Python SDK** | SRP client, HTTP requests, and local JWT verification |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/check-check.svg" width="18" align="center" alt="Tests icon" /> **pytest + Vitest** | Backend and JavaScript SDK tests |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/github.svg" width="18" align="center" alt="GitHub Actions icon" /> **GitHub Actions** | Runs backend and JavaScript SDK tests in CI |
+
+---
+
+## What Argus Provides
 
 - **SRP-6a registration and login:** Client-side password proof calculations; the password itself is not sent to the backend.
-- **Ed25519-signed JWTs:** Tokens can be verified locally by consumers that trust ZKAuth's public key.
+- **Ed25519-signed JWTs:** Tokens can be verified locally by consumers that trust Argus's public key.
 - **Hash-linked event records:** Registration and login events include hashes linked to the preceding event, allowing changes to the recorded chain to be detected when checked against a trusted copy.
 - **JavaScript and Python SDKs:** Helpers for registration, login, server-proof checking, public-key retrieval, and local token verification.
 - **A small Flask API:** SQLite-backed persistence, configurable login rate limits, and a health endpoint.
@@ -27,7 +66,7 @@ ZKAuth provides an HTTP authentication API and JavaScript and Python client SDKs
 | Area | How it works | Important limitation |
 |---|---|---|
 | Password proof | The client computes an SRP-6a verifier and performs the login proof exchange. The API receives the salt/verifier at registration, not the password. | SRP does not make weak passwords safe. A database breach exposes verifier material that may aid offline password guessing. A compromised client or a malicious server can also undermine authentication. |
-| Session tokens | The server signs EdDSA JWTs with its Ed25519 private key. Consumers can verify signatures with the public key without calling ZKAuth. | Consumers must obtain and trust the correct public key. Keep the private key private and use HTTPS in deployments. |
+| Session tokens | The server signs EdDSA JWTs with its Ed25519 private key. Consumers can verify signatures with the public key without calling Argus. | Consumers must obtain and trust the correct public key. Keep the private key private and use HTTPS in deployments. |
 | Authentication event log | Each event's SHA-256 hash includes the prior event's hash. | This is tamper-evident when independently checked; it is not an externally anchored or immutable audit service. An attacker able to rewrite the database may also be able to rebuild the chain. |
 
 The JavaScript SDK uses JavaScript `BigInt` for SRP arithmetic, which is not constant-time. Its `fetchPublicKey` helper trusts the key returned by the server; production consumers should pin or otherwise authenticate the expected public key instead of trusting an unverified first fetch.
@@ -38,7 +77,7 @@ The JavaScript SDK uses JavaScript `BigInt` for SRP arithmetic, which is not con
 
 ```text
 ┌─────────────────────────────┐             ┌─────────────────────────────┐
-│ Application + ZKAuth SDK    │             │ ZKAuth Flask API            │
+│ Application + Argus SDK     │             │ Argus Flask API             │
 │                             │             │                             │
 │ Password ── SRP client ─────┼── register ─► Store salt + verifier       │
 │              calculations   │             │                             │
@@ -166,7 +205,7 @@ The JavaScript SDK tests include Python-backend interoperability coverage and re
 ## Project Layout
 
 ```text
-ZKAuth/
+Argus/
 ├── backend/
 │   ├── app/
 │   │   ├── api/          # Flask endpoints
