@@ -14,6 +14,41 @@ ZKAuth provides an HTTP authentication API and JavaScript and Python client SDKs
 
 ---
 
+## Tech Stack
+
+The icons below are visual labels for the technologies used in the repository; they do not imply that every part of the demo frontend is fully implemented.
+
+### Frontend
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/atom.svg" width="18" align="center" alt="React icon" /> **React 18** | Demo frontend UI |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/zap.svg" width="18" align="center" alt="Vite icon" /> **Vite 5** | Frontend development and build tool |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/palette.svg" width="18" align="center" alt="Tailwind CSS icon" /> **Tailwind CSS 3.4** | Utility-first styling |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/arrow-left-right.svg" width="18" align="center" alt="Axios icon" /> **Axios** | HTTP client dependency; the demo integration is not wired up yet |
+
+### Backend and Cryptography
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/code-xml.svg" width="18" align="center" alt="Python icon" /> **Python 3.12** | Backend runtime |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/server.svg" width="18" align="center" alt="Flask icon" /> **Flask 3** | HTTP API and application factory |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/database.svg" width="18" align="center" alt="SQLAlchemy and SQLite icons" /> **SQLAlchemy 2 + SQLite** | ORM and local relational storage |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/lock.svg" width="18" align="center" alt="SRP icon" /> **SRP-6a + SHA-256** | Password verifier and proof exchange |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/key-round.svg" width="18" align="center" alt="Ed25519 icon" /> **Ed25519 / EdDSA JWT** | Token signing and verification with PyJWT and `cryptography` |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/fingerprint.svg" width="18" align="center" alt="Audit chain icon" /> **SHA-256 hash chain** | Links authentication events for tamper detection |
+
+### SDKs and Quality
+
+| Technology | Role |
+|:---|:---|
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/square-code.svg" width="18" align="center" alt="JavaScript SDK icon" /> **JavaScript SDK** | SRP client, HTTP requests, and local EdDSA JWT verification |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/package.svg" width="18" align="center" alt="Python SDK icon" /> **Python SDK** | SRP client, HTTP requests, and local JWT verification |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/check-check.svg" width="18" align="center" alt="Tests icon" /> **pytest + Vitest** | Backend and JavaScript SDK tests |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/github.svg" width="18" align="center" alt="GitHub Actions icon" /> **GitHub Actions** | Runs backend and JavaScript SDK tests in CI |
+
+---
+
 ## What ZKAuth Provides
 
 - **SRP-6a registration and login:** Client-side password proof calculations; the password itself is not sent to the backend.
