@@ -73,3 +73,15 @@ def test_registration_events_form_a_valid_audit_chain(client, db_session):
     ]
 
     assert verify_chain(plain_events) == (True, None)
+
+
+def test_admin_verify_chain_reports_event_count(client):
+    first = client.post("/api/register", json=registration_payload("alice"))
+    second = client.post("/api/register", json=registration_payload("bob"))
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    response = client.get("/api/admin/verify-chain")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"valid": True, "event_count": 2}
