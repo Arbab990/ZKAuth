@@ -2,9 +2,9 @@
 
 > **An early-stage, self-hostable authentication service built around SRP-6a password proofs, Ed25519-signed tokens, and a hash-linked authentication event log.**
 
-![Hendrik Goltzius's 1615 painting of Juno receiving the eyes of Argus from Mercury](https://upload.wikimedia.org/wikipedia/commons/f/fa/Hendrick_Goltzius_019.jpg)
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/eye.svg" width="32" height="32" alt="Eye icon representing Argus Panoptes" />
 
-*The name **Argus** is inspired by Argus Panoptes, the all-seeing guardian of Greek mythology, traditionally described as having many eyes. Image: [Hendrik Goltzius, *Juno receiving the eyes of Argus from Mercury* (1615)](https://commons.wikimedia.org/wiki/File:Hendrick_Goltzius_019.jpg), public domain via Wikimedia Commons.*
+*The name **Argus** is inspired by Argus Panoptes, the all-seeing guardian of Greek mythology, traditionally described as having many eyes.*
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-Flask-000000?style=flat-square&logo=flask&logoColor=white)
@@ -40,7 +40,7 @@ The icons below are visual labels for the technologies used in the repository; t
 | <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/database.svg" width="18" align="center" alt="SQLAlchemy and SQLite icons" /> **SQLAlchemy 2 + SQLite** | ORM and local relational storage |
 | <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/lock.svg" width="18" align="center" alt="SRP icon" /> **SRP-6a + SHA-256** | Password verifier and proof exchange |
 | <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/key-round.svg" width="18" align="center" alt="Ed25519 icon" /> **Ed25519 / EdDSA JWT** | Token signing and verification with PyJWT and `cryptography` |
-| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/fingerprint.svg" width="18" align="center" alt="Audit chain icon" /> **SHA-256 hash chain** | Links authentication events for tamper detection |
+| <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/git-commit-horizontal.svg" width="18" align="center" alt="Audit chain icon" /> **SHA-256 hash chain** | Links authentication events for tamper detection |
 
 ### SDKs and Quality
 
