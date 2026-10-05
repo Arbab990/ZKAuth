@@ -13,6 +13,9 @@ def load_config() -> dict:
         os.environ.get("ED25519_PRIVATE_KEY_PATH", "./keys/private_key.pem")
     ).expanduser()
     public_key_path = private_key_path.with_name("public_key.pem")
+    enable_admin_diagnostics = os.environ.get(
+        "ENABLE_ADMIN_DIAGNOSTICS", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     return {
         "DATABASE_URL": os.environ.get("DATABASE_URL", "sqlite:///zkauth.db"),
@@ -20,6 +23,10 @@ def load_config() -> dict:
         "ED25519_PUBLIC_KEY_PATH": str(public_key_path),
         "TOKEN_EXPIRE_MINUTES": int(os.environ.get("TOKEN_EXPIRE_MINUTES", "60")),
         "RATE_LIMIT_LOGIN": os.environ.get("RATE_LIMIT_LOGIN", "5 per minute"),
+        "ENABLE_ADMIN_DIAGNOSTICS": enable_admin_diagnostics,
+        "RATE_LIMIT_ADMIN_DIAGNOSTICS": os.environ.get(
+            "RATE_LIMIT_ADMIN_DIAGNOSTICS", "10 per minute"
+        ),
         "CORS_ORIGINS": os.environ.get(
             "CORS_ORIGINS", "http://localhost:5173"
         ),

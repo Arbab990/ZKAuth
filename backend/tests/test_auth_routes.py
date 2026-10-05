@@ -75,13 +75,37 @@ def test_registration_events_form_a_valid_audit_chain(client, db_session):
     assert verify_chain(plain_events) == (True, None)
 
 
-def test_admin_verify_chain_reports_event_count(client):
-    first = client.post("/api/register", json=registration_payload("alice"))
-    second = client.post("/api/register", json=registration_payload("bob"))
-    assert first.status_code == 201
-    assert second.status_code == 201
-
+def test_admin_verify_chain_is_disabled_by_default(client):
     response = client.get("/api/admin/verify-chain")
+
+    assert response.status_code == 404
+
+
+def test_admin_verify_chain_reports_event_count(app_factory):
+    app = app_factory(ENABLE_ADMIN_DIAGNOSTICS=True)
+    with app.test_client() as client:
+        first = client.post(
+            "/api/register", json=registration_payload("alice")
+        )
+        second = client.post(
+            "/api/register", json=registration_payload("bob")
+        )
+        assert first.status_code == 201
+        assert second.status_code == 201
+
+        response = client.get("/api/admin/verify-chain")
 
     assert response.status_code == 200
     assert response.get_json() == {"valid": True, "event_count": 2}
+
+
+def test_admin_verify_chain_is_rate_limited(app_factory):
+    app = app_factory(
+        ENABLE_ADMIN_DIAGNOSTICS=True,
+        RATE_LIMIT_ADMIN_DIAGNOSTICS="1 per minute",
+    )
+    with app.test_client() as client:
+        assert client.get("/api/admin/verify-chain").status_code == 200
+        response = client.get("/api/admin/verify-chain")
+
+    assert response.status_code == 429

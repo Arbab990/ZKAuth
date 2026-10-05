@@ -1,9 +1,10 @@
 """Development-only audit-chain diagnostics."""
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 
 from app.core.audit_chain import verify_chain
 from app.database import get_session
+from app.extensions import limiter
 from app.models.auth_event import AuthEvent
 
 
@@ -11,6 +12,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 
 @admin_bp.get("/verify-chain")
+@limiter.limit(lambda: current_app.config["RATE_LIMIT_ADMIN_DIAGNOSTICS"])
 def verify_audit_chain():
     events = (
         get_session()
