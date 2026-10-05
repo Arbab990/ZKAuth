@@ -4,16 +4,21 @@ import { getBaseUrl } from "../api/zkauth.js"
 
 export default function ChainStatus() {
   const [status, setStatus] = useState({ kind: "loading" })
+  const [refreshCount, setRefreshCount] = useState(0)
 
   useEffect(() => {
     let isMounted = true
+    setStatus({ kind: "loading" })
     axios
       .get(getBaseUrl().replace(/\/$/, "") + "/api/admin/verify-chain")
       .then(({ data }) => {
         if (!isMounted) return
-        if (data?.valid === true) {
+        if (data?.valid === true && Number.isInteger(data.event_count)) {
           setStatus({ kind: "valid", eventCount: data.event_count })
-        } else if (data?.valid === false) {
+        } else if (
+          data?.valid === false &&
+          Number.isInteger(data.broken_at_event_id)
+        ) {
           setStatus({ kind: "broken", eventId: data.broken_at_event_id })
         } else {
           setStatus({ kind: "error" })
@@ -26,45 +31,44 @@ export default function ChainStatus() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [refreshCount])
 
-  if (status.kind === "loading") {
-    return (
-      <section className="rounded-lg border border-slate-200 p-4" aria-live="polite">
-        <h3 className="font-semibold text-slate-800">Audit-chain integrity</h3>
-        <p className="mt-1 text-sm text-slate-600">Checking the event chain…</p>
-      </section>
-    )
-  }
-
-  if (status.kind === "valid") {
-    return (
-      <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-4" aria-live="polite">
-        <h3 className="font-semibold text-emerald-800">Audit chain healthy</h3>
-        <p className="mt-1 text-sm text-emerald-700">
-          Valid hash chain · {status.eventCount} events
-        </p>
-      </section>
-    )
-  }
-
-  if (status.kind === "broken") {
-    return (
-      <section className="rounded-lg border border-red-200 bg-red-50 p-4" aria-live="polite">
-        <h3 className="font-semibold text-red-800">Audit chain is broken</h3>
-        <p className="mt-1 text-sm text-red-700">
-          First invalid event: {status.eventId}
-        </p>
-      </section>
-    )
-  }
+  const isLoading = status.kind === "loading"
 
   return (
-    <section className="rounded-lg border border-amber-200 bg-amber-50 p-4" role="status">
-      <h3 className="font-semibold text-amber-800">Audit-chain status unavailable</h3>
-      <p className="mt-1 text-sm text-amber-700">
-        Could not check chain integrity. Ensure the backend is running.
-      </p>
+    <section
+      className={`chain-status chain-status--${status.kind}`}
+      aria-live="polite"
+    >
+      <div className="chain-status-mark" aria-hidden="true">
+        {status.kind === "valid" ? "✓" : status.kind === "broken" ? "!" : "↻"}
+      </div>
+      <div className="chain-status-copy">
+        <span className="card-kicker">03 / AUDIT TRAIL</span>
+        <h3>
+          {status.kind === "loading" && "Checking event chain"}
+          {status.kind === "valid" && "Audit chain healthy"}
+          {status.kind === "broken" && "Chain integrity issue"}
+          {status.kind === "error" && "Chain status unavailable"}
+        </h3>
+        <p>
+          {status.kind === "loading" && "Verifying linked event hashes…"}
+          {status.kind === "valid" && `${status.eventCount} events verified`}
+          {status.kind === "broken" &&
+            `First invalid event: ${status.eventId}`}
+          {status.kind === "error" &&
+            "The diagnostic may be disabled or the service is unreachable."}
+        </p>
+      </div>
+      <button
+        aria-label="Refresh audit-chain status"
+        className={isLoading ? "refresh-button is-spinning" : "refresh-button"}
+        disabled={isLoading}
+        onClick={() => setRefreshCount((count) => count + 1)}
+        type="button"
+      >
+        ↻
+      </button>
     </section>
   )
 }

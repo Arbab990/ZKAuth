@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
+import gsap from "gsap"
 import {
   getBaseUrl,
   LoginFailedError,
@@ -9,9 +10,6 @@ import {
   fetchPublicKey,
   verifyToken,
 } from "../api/zkauth.js"
-
-const inputClass =
-  "mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
 
 function messageForError(error) {
   if (error instanceof LoginFailedError) {
@@ -31,10 +29,31 @@ function messageForError(error) {
 }
 
 export default function Login({ onLoginSuccess }) {
+  const formRef = useRef(null)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useLayoutEffect(() => {
+    const form = formRef.current
+    if (!form || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined
+    }
+
+    const context = gsap.context(() => {
+      gsap.from(".form-field, .submit-button", {
+        y: 12,
+        opacity: 0,
+        duration: 0.42,
+        stagger: 0.08,
+        ease: "power2.out",
+      })
+    }, form)
+
+    return () => context.revert()
+  }, [])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -44,60 +63,73 @@ export default function Login({ onLoginSuccess }) {
       const result = await login(getBaseUrl(), username, password)
       const publicKey = await fetchPublicKey(getBaseUrl())
       const claims = await verifyToken(result.token, publicKey)
-      // Keep bearer tokens in memory only; this demo intentionally avoids browser storage.
       onLoginSuccess({ token: result.token, claims })
     } catch (caught) {
       setError(messageForError(caught))
     } finally {
       setIsSubmitting(false)
       setPassword("")
+      setShowPassword(false)
     }
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-xl bg-white p-6 shadow">
-      <h2 className="text-xl font-semibold">Log in</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Prove your password without sending it to the server.
-      </p>
-
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-slate-700">
-          Username
+    <form className="auth-form" onSubmit={handleSubmit} ref={formRef}>
+      <label className="form-field">
+        <span className="field-label">Username</span>
+        <span className="input-wrap">
+          <span className="input-icon" aria-hidden="true">@</span>
           <input
             autoComplete="username"
-            className={inputClass}
+            autoCapitalize="none"
+            className="auth-input"
             onChange={(event) => setUsername(event.target.value)}
+            placeholder="Your username"
             required
             type="text"
             value={username}
           />
-        </label>
-        <label className="block text-sm font-medium text-slate-700">
-          Password
+        </span>
+      </label>
+
+      <label className="form-field">
+        <span className="field-label">Password</span>
+        <span className="input-wrap">
+          <span className="input-icon" aria-hidden="true">◇</span>
           <input
             autoComplete="current-password"
-            className={inputClass}
+            className="auth-input auth-input--password"
             onChange={(event) => setPassword(event.target.value)}
+            placeholder="Your password"
             required
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={password}
           />
-        </label>
-        <button
-          className="w-full rounded-md bg-indigo-700 px-4 py-2 font-medium text-white hover:bg-indigo-800 disabled:cursor-wait disabled:opacity-60"
-          disabled={isSubmitting}
-          type="submit"
-        >
-          {isSubmitting ? "Signing in…" : "Login"}
-        </button>
-      </form>
+          <button
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="password-toggle"
+            onClick={() => setShowPassword((visible) => !visible)}
+            type="button"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </span>
+      </label>
+
+      <button className="submit-button" disabled={isSubmitting} type="submit">
+        <span>{isSubmitting ? "Verifying proof…" : "Sign in securely"}</span>
+        <span className="button-arrow" aria-hidden="true">
+          {isSubmitting ? "◌" : "↗"}
+        </span>
+      </button>
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="form-message form-message--error" role="alert">
+          <span aria-hidden="true">!</span>
           {error}
         </p>
       )}
-    </section>
+    </form>
   )
 }
