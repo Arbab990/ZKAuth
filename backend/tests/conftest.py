@@ -24,10 +24,27 @@ def app(keypair_files):
         test_config={
             "TESTING": True,
             "RATE_LIMIT_LOGIN": "1000 per minute",
+            "ENABLE_ADMIN_DIAGNOSTICS": False,
             "DATABASE_URL": "sqlite:///:memory:",
             "ED25519_PRIVATE_KEY_PATH": str(keypair_files["private_key_path"]),
         }
     )
+
+
+@pytest.fixture
+def app_factory(keypair_files):
+    def make_app(**overrides):
+        config = {
+            "TESTING": True,
+            "RATE_LIMIT_LOGIN": "1000 per minute",
+            "ENABLE_ADMIN_DIAGNOSTICS": False,
+            "DATABASE_URL": "sqlite:///:memory:",
+            "ED25519_PRIVATE_KEY_PATH": str(keypair_files["private_key_path"]),
+        }
+        config.update(overrides)
+        return create_app(test_config=config)
+
+    return make_app
 
 
 @pytest.fixture
